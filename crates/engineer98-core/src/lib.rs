@@ -4,6 +4,9 @@
 
 use pyo3::prelude::*;
 
+pub mod api;
+pub mod image;
+
 /// Return the crate version as defined in Cargo.toml.
 #[pyfunction]
 fn version() -> &'static str {
@@ -13,5 +16,8 @@ fn version() -> &'static str {
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(version, m)?)?;
+    m.add_class::<api::PyImage>()?;
+    m.add_class::<api::PyGeometry>()?;
+    m.add_class::<api::PyPartition>()?;
     Ok(())
 }
