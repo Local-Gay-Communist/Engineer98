@@ -1,26 +1,30 @@
 """Engineer98 — decompilation and reverse engineering suite for PC98 software."""
 
+from .analysis import CodeMap, Function, FunctionBuilder, FunctionMap, Traversal
 from ._core import ExeFile, Geometry, Image, Partition, version
 from .disasm import Instruction, Operand, OperandKind, X86Disassembler, disassemble
 from .fs import FatVolume
-from .analysis import CodeMap, Traversal
 
 __version__ = version()
 __all__ = [
     "__version__",
+    "CodeMap",
     "ExeFile",
     "FatVolume",
+    "Function",
+    "FunctionBuilder",
+    "FunctionMap",
     "Geometry",
     "Image",
     "Instruction",
     "Operand",
     "OperandKind",
     "Partition",
+    "Traversal",
     "X86Disassembler",
     "describe_image",
     "disassemble",
 ]
-
 
 def describe_image(path: str) -> str:
     """Open a disk image and return a human-readable summary string."""

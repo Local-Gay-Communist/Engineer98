@@ -22,6 +22,28 @@ from .._core import ExeFile
 # We wrap it to decode one instruction at a time from a specific offset.
 _CHUNK = 64  # bytes we hand to capstone per decode attempt
 
+def resolve_target_address(insn: Instruction) -> int | None:
+    """Extract the module offset of a direct call or jump target, if any.
+
+    Two cases:
+    - Far call/jmp (opcodes 0x9A / 0xEA): segment and offset come from the
+      raw bytes. Target = segment * 16 + offset.
+    - Near call/jmp: Capstone's single imm operand is already a flat target
+      address, since we pass base_addr to disassemble().
+
+    Indirect targets (register or memory operands) return None.
+    """
+    if len(insn.bytes_) >= 5 and insn.bytes_[0] in (0x9A, 0xEA):
+        offset = insn.bytes_[1] | (insn.bytes_[2] << 8)
+        segment = insn.bytes_[3] | (insn.bytes_[4] << 8)
+        return segment * 16 + offset
+
+    if not insn.operands:
+        return None
+    op = insn.operands[0]
+    if op.kind.value != "imm" or op.imm is None:
+        return None
+    return op.imm
 
 @dataclass
 class CodeMap:
@@ -177,3 +199,4 @@ class Traversal:
         chunk = self.module[addr : addr + _CHUNK]
         result = self._dis.disassemble(chunk, base_addr=addr, max_instructions=1)
         return result[0] if result else None
+
