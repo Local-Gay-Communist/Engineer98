@@ -1,0 +1,13 @@
+[package]
+name = "engineer98-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core analysis engine for Engineer98"
+
+[lib]
+name = "engineer98_core"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.30", features = ["extension-module"] }

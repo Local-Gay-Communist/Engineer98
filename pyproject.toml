@@ -1,0 +1,17 @@
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "engineer98"
+version = "0.0.1"
+description = "A suite for decompiling and reverse engineering PC98 software"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+
+[tool.maturin]
+manifest-path = "crates/engineer98-core/Cargo.toml"
+python-source = "python"
+module-name = "engineer98._core"
+features = ["pyo3/extension-module"]

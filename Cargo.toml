@@ -1,0 +1,8 @@
+[workspace]
+members = ["crates/engineer98-core"]
+resolver = "2"
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "GPLv3"
