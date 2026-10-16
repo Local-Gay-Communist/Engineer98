@@ -5,6 +5,7 @@
 use pyo3::prelude::*;
 
 pub mod api;
+pub mod exe;
 pub mod image;
 
 /// Return the crate version as defined in Cargo.toml.
@@ -19,5 +20,6 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<api::PyImage>()?;
     m.add_class::<api::PyGeometry>()?;
     m.add_class::<api::PyPartition>()?;
+    m.add_class::<api::PyExeFile>()?;
     Ok(())
 }

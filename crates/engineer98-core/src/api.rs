@@ -1,13 +1,14 @@
-//! Python-facing wrappers for the image layer.
+//! Python-facing wrappers for the image and executable layers.
 //!
 //! The Rust core works with the `DiskImage` trait and its value types.
 //! This module wraps them in `#[pyclass]` types so Python can hold a
-//! reference to an opened image and query it as a structured object,
-//! rather than round-tripping through formatted strings.
+//! reference to an opened image or executable and query it as a
+//! structured object, rather than round-tripping through formatted strings.
 
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+use crate::exe::ExeFile;
 use crate::image::{
     self, DiskImage, Geometry as RustGeometry, ImageError, Partition as RustPartition,
 };
@@ -15,6 +16,10 @@ use crate::image::{
 fn to_pyerr(e: ImageError) -> PyErr {
     PyValueError::new_err(e.to_string())
 }
+
+// ---------------------------------------------------------------------------
+// Geometry
+// ---------------------------------------------------------------------------
 
 /// Geometry of a PC-98 disk: cylinders × heads × sectors-per-track × sector-size.
 #[pyclass(name = "Geometry", module = "engineer98._core", frozen)]
@@ -59,6 +64,10 @@ impl From<RustGeometry> for PyGeometry {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Partition
+// ---------------------------------------------------------------------------
+
 /// One entry from a PC-98 IPL1 partition table.
 #[pyclass(name = "Partition", module = "engineer98._core", frozen)]
 #[derive(Clone)]
@@ -99,11 +108,15 @@ impl From<RustPartition> for PyPartition {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Image
+// ---------------------------------------------------------------------------
+
 /// An opened PC-98 disk image.
 ///
-/// Holds the parsed `Box<dyn DiskImage>` internally. Marked `Send` so it can
-/// be moved across Python threads — useful later for background loading in
-/// the GUI.
+/// Holds the parsed `Box<dyn DiskImage>` internally. Marked `Send`/`Sync`
+/// through the trait bound so it can be moved across Python threads —
+/// useful later for background loading in the GUI.
 #[pyclass(name = "Image", module = "engineer98._core")]
 pub struct PyImage {
     inner: Box<dyn DiskImage>,
@@ -152,6 +165,108 @@ impl PyImage {
             g.heads,
             g.sectors_per_track,
             g.sector_size,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
+// ExeFile
+// ---------------------------------------------------------------------------
+
+/// A parsed DOS MZ executable.
+#[pyclass(name = "ExeFile", module = "engineer98._core")]
+pub struct PyExeFile {
+    inner: ExeFile,
+}
+
+#[pymethods]
+impl PyExeFile {
+    /// Open a DOS MZ executable from a file path.
+    #[staticmethod]
+    fn open(path: &str) -> PyResult<Self> {
+        let data = std::fs::read(path)
+            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        let inner = ExeFile::from_bytes(data).map_err(to_pyerr)?;
+        Ok(Self { inner })
+    }
+
+    /// Parse a DOS MZ executable from an in-memory byte buffer.
+    #[staticmethod]
+    fn from_bytes(data: &[u8]) -> PyResult<Self> {
+        let inner = ExeFile::from_bytes(data.to_vec()).map_err(to_pyerr)?;
+        Ok(Self { inner })
+    }
+
+    #[getter]
+    fn entry_cs(&self) -> u16 {
+        self.inner.header.initial_cs
+    }
+
+    #[getter]
+    fn entry_ip(&self) -> u16 {
+        self.inner.header.initial_ip
+    }
+
+    #[getter]
+    fn entry_module_offset(&self) -> u32 {
+        self.inner.header.entry_module_offset()
+    }
+
+    #[getter]
+    fn entry_file_offset(&self) -> u32 {
+        self.inner.header.entry_file_offset()
+    }
+
+    #[getter]
+    fn initial_ss(&self) -> u16 {
+        self.inner.header.initial_ss
+    }
+
+    #[getter]
+    fn initial_sp(&self) -> u16 {
+        self.inner.header.initial_sp
+    }
+
+    #[getter]
+    fn header_bytes(&self) -> u32 {
+        self.inner.header.header_bytes()
+    }
+
+    #[getter]
+    fn load_module_bytes(&self) -> u32 {
+        self.inner.header.load_module_bytes()
+    }
+
+    #[getter]
+    fn reloc_count(&self) -> u16 {
+        self.inner.header.reloc_count
+    }
+
+    /// The relocation table as a list of `(offset, segment)` pairs.
+    fn relocations(&self) -> Vec<(u16, u16)> {
+        self.inner.relocations()
+    }
+
+    /// Read `length` bytes from the executable at absolute file offset `offset`.
+    fn read_at(&self, offset: u32, length: u32) -> PyResult<Vec<u8>> {
+        self.inner
+            .read_at(offset, length)
+            .map(|s| s.to_vec())
+            .map_err(to_pyerr)
+    }
+
+    /// The entire load module (header-stripped executable image).
+    fn code_bytes(&self) -> Vec<u8> {
+        self.inner.code_bytes().to_vec()
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "<engineer98.ExeFile entry={:04x}:{:04x} load_module={} bytes, relocs={}>",
+            self.inner.header.initial_cs,
+            self.inner.header.initial_ip,
+            self.inner.header.load_module_bytes(),
+            self.inner.header.reloc_count,
         )
     }
 }
