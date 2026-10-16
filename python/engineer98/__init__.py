@@ -1,9 +1,22 @@
 """Engineer98 — decompilation and reverse engineering suite for PC98 software."""
 
-from .analysis import CodeMap, Function, FunctionBuilder, FunctionMap, Traversal
+from .analysis import (
+    CodeMap,
+    Function,
+    FunctionBuilder,
+    FunctionMap,
+    FunctionRefs,
+    ReferenceMap,
+    StringEntry,
+    StringMap,
+    Traversal,
+    build_references,
+    extract_strings,
+)
 from ._core import ExeFile, Geometry, Image, Partition, version
 from .disasm import Instruction, Operand, OperandKind, X86Disassembler, disassemble
 from .fs import FatVolume
+
 
 __version__ = version()
 __all__ = [
