@@ -3,6 +3,7 @@
 from ._core import ExeFile, Geometry, Image, Partition, version
 from .disasm import Instruction, Operand, OperandKind, X86Disassembler, disassemble
 from .fs import FatVolume
+from .analysis import CodeMap, Traversal
 
 __version__ = version()
 __all__ = [
